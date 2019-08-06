@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/sonyarouje/simdb/db"
 )
 
 // The Example function collects Green, up-to-date, use-cases/examples, as specified with the PO
@@ -19,7 +21,10 @@ func Example() {
 	fmt.Printf("lt2: %+v\n", lt2)
 
 	// .. store them
-	r := Register{}
+	d, _ := db.New("data")
+	r := Register{db: d}
+	defer r.Clear()
+
 	r.AddLunchTalk(lt1)
 	r.AddLunchTalk(lt2)
 
@@ -64,8 +69,8 @@ func Example() {
 	// More to come..
 
 	//Output:
-	// lt1: {Id:0 Title:TDD and Go Speaker:Ken Lomax Reviews:[]}
-	// lt2: {Id:0 Title:Kyma Drones Speaker:JE Reviews:[]}
+	// lt1: {Id: Title:TDD and Go Speaker:Ken Lomax Reviews:[]}
+	// lt2: {Id: Title:Kyma Drones Speaker:JE Reviews:[]}
 	// lts3: [{Id:0 Title:TDD and Go Speaker:Ken Lomax Reviews:[]} {Id:1 Title:Kyma Drones Speaker:JE Reviews:[]}]
 	// lts4: [{Id:0 Title:TDD and Go Speaker:Ken Lomax Reviews:[{Id:0 Comment:Big pile of poo}]} {Id:1 Title:Kyma Drones Speaker:JE Reviews:[]}]
 	// lts5: [{Id:0 Title:TDD and Go Speaker:Ken Lomax Reviews:[{Id:0 Comment:Just amazing!!!}]} {Id:1 Title:Kyma Drones Speaker:JE Reviews:[]}]
@@ -74,30 +79,35 @@ func Example() {
 	// e8: Out of bounds
 	// e9: Missing Data
 	// e10: Missing Data
-
-}
-
-func TestMultipleCalls(t *testing.T) {
-	n := 100
-	r := Register{}
-	for i := 0; i < n; i++ {
-		go r.AddLunchTalk(LunchTalk{Title: "Some", Speaker: "Thing"})
-	}
-	for i := 0; i < n; i++ {
-		go r.AddReview(0, Review{Comment: "Just amazing!!!"})
-	}
-	for i := 0; i < n; i++ {
-		go r.AdjustReview(0, 0, Review{Comment: "Just amazing!!!"})
-	}
-	time.Sleep(2 * time.Second)
-
 }
 
 func Benchmark(b *testing.B) {
-	r := Register{}
+	d, _ := db.New("data")
+	r := Register{db: d}
+	defer r.Clear()
+
 	for i := 0; i < b.N; i++ {
 		r.AddLunchTalk(LunchTalk{Title: "Some", Speaker: "Thing"})
 		r.AddReview(rand.Intn(100), Review{Comment: "Just amazing!!!"})
 		r.AdjustReview(rand.Intn(100), rand.Intn(100), Review{Comment: "Just amazing!!!"})
 	}
+}
+
+func TestMultipleCalls(t *testing.T) {
+	n := 100
+	d, _ := db.New("data")
+	r := Register{db: d}
+	defer r.Clear()
+
+	for i := 0; i < n; i++ {
+		go r.AddLunchTalk(LunchTalk{Title: "Some", Speaker: "Thing"})
+	}
+	for i := 0; i < n; i++ {
+		go r.AddReview(rand.Intn(100), Review{Comment: "Just amazing!!!"})
+	}
+	for i := 0; i < n; i++ {
+		go r.AdjustReview(rand.Intn(100), rand.Intn(100), Review{Comment: "Just amazing!!!"})
+	}
+	time.Sleep(2 * time.Second)
+
 }

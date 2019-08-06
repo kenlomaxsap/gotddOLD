@@ -3,16 +3,20 @@ package gotdd
 
 import (
 	"errors"
+	"os"
+	"strconv"
 	"sync"
+
+	"github.com/sonyarouje/simdb/db"
 )
 
 type Review struct {
-	Id      int
+	Id      string
 	Comment string
 }
 
 type LunchTalk struct {
-	Id      int
+	Id      string
 	Title   string
 	Speaker string
 	Reviews []Review
@@ -21,6 +25,13 @@ type LunchTalk struct {
 type Register struct {
 	lts   []LunchTalk
 	mutex sync.Mutex
+	db    *db.Driver
+}
+
+func (lt LunchTalk) ID() (jsonField string, value interface{}) {
+	value = lt.Id
+	jsonField = "Id"
+	return
 }
 
 func (r *Register) AddLunchTalk(lt LunchTalk) error {
@@ -29,15 +40,18 @@ func (r *Register) AddLunchTalk(lt LunchTalk) error {
 	if len(lt.Speaker) == 0 || len(lt.Title) == 0 {
 		return errors.New("Missing Data")
 	}
-	lt.Id = len(r.lts)
+	lt.Id = strconv.Itoa(len(r.lts))
 	r.lts = append(r.lts, lt)
+	r.db.Insert(lt)
 	return nil
 }
 
 func (r *Register) GetLunchTalks() []LunchTalk {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	return r.lts
+	var lunchtalks []LunchTalk
+	r.db.Open(LunchTalk{}).Get().AsEntity(&lunchtalks)
+	return lunchtalks
 }
 
 func (r *Register) AddReview(i int, rev Review) error {
@@ -49,8 +63,9 @@ func (r *Register) AddReview(i int, rev Review) error {
 	if i > len(r.lts)-1 {
 		return errors.New("Out of bounds")
 	}
-	rev.Id = len(r.lts[i].Reviews)
+	rev.Id = strconv.Itoa(len(r.lts[i].Reviews))
 	r.lts[i].Reviews = append(r.lts[i].Reviews, rev)
+	r.db.Update(r.lts[i])
 	return nil
 }
 
@@ -65,7 +80,15 @@ func (r *Register) AdjustReview(i int, j int, rev Review) error {
 		return errors.New("Out of bounds")
 	}
 
-	rev.Id = j
+	rev.Id = strconv.Itoa(j)
 	r.lts[i].Reviews[j] = rev
+	r.db.Update(r.lts[i])
 	return nil
+}
+
+func (r *Register) Clear() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.lts = []LunchTalk{}
+	os.Remove("./data/LunchTalk")
 }
