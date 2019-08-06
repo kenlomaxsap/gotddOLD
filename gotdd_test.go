@@ -54,12 +54,14 @@ func Example() {
 	e10 := r.AddReview(999, Review{Comment: ""})
 	fmt.Printf("e10: %+v\n", e10)
 
-	// It needs to be threads safe - sp multiple people can call this at once
-	// go test -v -race
-
 	// Some measure of performance please..
 	// go test -bench=.
 	// gobenchui -last 10 github.com/kenlomaxhybris/gotdd
+
+	// It needs to be threads safe - sp multiple people can call this at once
+	// go test -v -race
+
+	// More to come..
 
 	//Output:
 	// lt1: {Id:0 Title:TDD and Go Speaker:Ken Lomax Reviews:[]}
@@ -82,10 +84,10 @@ func TestMultipleCalls(t *testing.T) {
 		go r.AddLunchTalk(LunchTalk{Title: "Some", Speaker: "Thing"})
 	}
 	for i := 0; i < n; i++ {
-		go r.AddReview(rand.Intn(100), Review{Comment: "Just amazing!!!"})
+		go r.AddReview(0, Review{Comment: "Just amazing!!!"})
 	}
 	for i := 0; i < n; i++ {
-		go r.AdjustReview(rand.Intn(100), rand.Intn(100), Review{Comment: "Just amazing!!!"})
+		go r.AdjustReview(0, 0, Review{Comment: "Just amazing!!!"})
 	}
 	time.Sleep(2 * time.Second)
 
